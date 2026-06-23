@@ -8,6 +8,7 @@ export class GraphWebviewPanel {
   private panel: vscode.WebviewPanel | undefined;
   private disposables: vscode.Disposable[] = [];
   private extensionUri: vscode.Uri;
+  private externalMessageHandler?: (message: WebviewToExtensionMessage) => Promise<void>;
 
   private constructor(private readonly context: vscode.ExtensionContext) {
     this.extensionUri = context.extensionUri;
@@ -82,7 +83,23 @@ export class GraphWebviewPanel {
     this.panel?.webview.postMessage(message);
   }
 
+  setMessageHandler(handler: (message: WebviewToExtensionMessage) => Promise<void>): void {
+    this.externalMessageHandler = handler;
+  }
+
+  handleExternalMessage(message: WebviewToExtensionMessage): void {
+    if (this.externalMessageHandler) {
+      this.externalMessageHandler(message);
+    } else {
+      this.handleWebviewMessage(message);
+    }
+  }
+
   private async handleWebviewMessage(message: WebviewToExtensionMessage): Promise<void> {
+    if (this.externalMessageHandler) {
+      await this.externalMessageHandler(message);
+      return;
+    }
     switch (message.type) {
       case 'ready':
         // Webview is ready, send initial data
