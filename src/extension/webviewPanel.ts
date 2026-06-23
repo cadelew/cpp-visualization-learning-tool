@@ -23,7 +23,7 @@ export class GraphWebviewPanel {
 
   show(options?: { concurrencyOnly?: boolean }): void {
     if (this.panel) {
-      this.panel.reveal(vscode.ViewColumn.Beside);
+      this.panel.reveal(vscode.ViewColumn.One);
       if (options?.concurrencyOnly) {
         this.postMessage({ type: 'config', payload: this.getConfig(true) });
       }
@@ -33,7 +33,7 @@ export class GraphWebviewPanel {
     this.panel = vscode.window.createWebviewPanel(
       'cppVizGraph',
       'C++ Architecture Graph',
-      vscode.ViewColumn.Beside,
+      vscode.ViewColumn.One,
       {
         enableScripts: true,
         retainContextWhenHidden: true,
@@ -111,7 +111,7 @@ export class GraphWebviewPanel {
         const position = new vscode.Position(line - 1, col - 1);
         const range = new vscode.Range(position, position);
         const doc = await vscode.workspace.openTextDocument(uri);
-        const editor = await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+        const editor = await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
         editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
         editor.selection = new vscode.Selection(position, position);
         break;
@@ -141,6 +141,9 @@ export class GraphWebviewPanel {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview', 'index.js')
     );
+    const styleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview', 'index.css')
+    );
 
     const nonce = getNonce();
 
@@ -157,6 +160,7 @@ export class GraphWebviewPanel {
       let html = fs.readFileSync(htmlTemplatePath, 'utf8');
       html = html.replace(/{{nonce}}/g, nonce);
       html = html.replace(/{{scriptUri}}/g, scriptUri.toString());
+      html = html.replace(/{{styleUri}}/g, styleUri.toString());
       html = html.replace(/{{cspSource}}/g, webview.cspSource);
       return html;
     }
@@ -169,6 +173,18 @@ export class GraphWebviewPanel {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource};">
   <title>C++ Architecture Graph</title>
+  <link rel="stylesheet" href="${styleUri}">
+  <style>
+    html, body, #root {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--vscode-editor-background, #1e1e1e);
+      color: var(--vscode-editor-foreground, #d4d4d4);
+    }
+  </style>
 </head>
 <body>
   <div id="root"></div>
