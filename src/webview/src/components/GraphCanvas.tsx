@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import {
   ReactFlow,
   Background,
+  BackgroundVariant,
   Controls,
   MiniMap,
   useNodesState,
@@ -38,8 +39,8 @@ export function GraphCanvas({
   const { computeLayout, isLayouting } = useGraphLayout();
   const { fitView } = useReactFlow();
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const layoutDoneRef = useRef(false);
 
-  // Apply filters
   const filteredData = useMemo(() => {
     let filteredNodes = graphNodes;
     let filteredEdges = graphEdges;
@@ -74,7 +75,6 @@ export function GraphCanvas({
       filteredEdges = filteredEdges.filter((e) => filter.edgeKinds!.includes(e.kind));
     }
 
-    // Only keep edges whose both ends exist in filtered nodes
     const nodeIds = new Set(filteredNodes.map((n) => n.id));
     filteredEdges = filteredEdges.filter(
       (e) => nodeIds.has(e.source) && nodeIds.has(e.target)
@@ -83,7 +83,6 @@ export function GraphCanvas({
     return { nodes: filteredNodes, edges: filteredEdges };
   }, [graphNodes, graphEdges, filter]);
 
-  // Compute layout when data or algorithm changes
   useEffect(() => {
     if (filteredData.nodes.length === 0) {
       setNodes([]);
@@ -96,16 +95,18 @@ export function GraphCanvas({
       if (!cancelled) {
         setNodes(result.nodes);
         setEdges(result.edges);
+        layoutDoneRef.current = true;
+        // Auto fit view after layout
+        setTimeout(() => fitView({ padding: 0.15, duration: 300 }), 50);
       }
     });
 
     return () => { cancelled = true; };
-  }, [filteredData, layout, computeLayout, setNodes, setEdges]);
+  }, [filteredData, layout, computeLayout, setNodes, setEdges, fitView]);
 
-  // Fit view when trigger changes
   useEffect(() => {
     if (fitViewTrigger > 0) {
-      setTimeout(() => fitView({ padding: 0.2 }), 100);
+      setTimeout(() => fitView({ padding: 0.15, duration: 300 }), 50);
     }
   }, [fitViewTrigger, fitView]);
 
@@ -120,7 +121,6 @@ export function GraphCanvas({
     [graphNodes, onNodeClick]
   );
 
-  // Highlight selected node
   const styledNodes = useMemo(
     () =>
       nodes.map((node) => ({
@@ -129,6 +129,17 @@ export function GraphCanvas({
       })),
     [nodes, selectedNodeId]
   );
+
+  if (graphNodes.length === 0 && !isLayouting) {
+    return (
+      <div className="graph-canvas">
+        <div className="graph-canvas__empty">
+          <h3>No C++ files found</h3>
+          <p>Open a folder containing .cpp, .cc, .h, or .hpp files<br />and run "C++ Viz: Analyze Workspace"</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="graph-canvas">
@@ -143,18 +154,24 @@ export function GraphCanvas({
         onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         fitView
-        minZoom={0.1}
+        fitViewOptions={{ padding: 0.15 }}
+        minZoom={0.05}
         maxZoom={4}
         proOptions={{ hideAttribution: true }}
+        defaultEdgeOptions={{
+          type: 'smoothstep',
+          style: { strokeWidth: 1.5 },
+        }}
       >
-        <Background />
-        <Controls />
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+        <Controls showInteractive={false} />
         <MiniMap
           nodeColor={(node) => {
             const data = node.data as { color?: string };
             return data?.color || '#888';
           }}
-          style={{ backgroundColor: 'var(--vscode-editor-background, #1e1e1e)' }}
+          pannable
+          zoomable
         />
       </ReactFlow>
     </div>

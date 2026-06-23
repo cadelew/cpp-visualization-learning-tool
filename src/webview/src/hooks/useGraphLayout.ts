@@ -73,6 +73,24 @@ function getNodeType(kind: string): string {
   }
 }
 
+const edgeColors: Record<string, string> = {
+  calls: '#888888',
+  includes: '#666666',
+  inherits: '#4ec9b0',
+  contains: '#555555',
+  depends_on: '#777777',
+  spawns: '#ff9944',
+  joins: '#ff9944',
+  locks: '#ff4444',
+  unlocks: '#ff6666',
+  waits_on: '#c586c0',
+  notifies: '#c586c0',
+  reads_atomic: '#ff6b9d',
+  writes_atomic: '#ff6b9d',
+  produces_to: '#9cdcfe',
+  consumes_from: '#9cdcfe',
+};
+
 function graphEdgeToFlowEdge(edge: GraphEdge): Edge {
   const isConcurrency = [
     'spawns', 'joins', 'locks', 'unlocks', 'waits_on',
@@ -80,15 +98,29 @@ function graphEdgeToFlowEdge(edge: GraphEdge): Edge {
     'produces_to', 'consumes_from',
   ].includes(edge.kind);
 
+  const color = edgeColors[edge.kind] || '#888';
+
   return {
     id: edge.id,
     source: edge.source,
     target: edge.target,
+    type: 'smoothstep',
     label: edge.kind.replace(/_/g, ' '),
+    labelStyle: { fill: '#aaa', fontSize: 10, fontWeight: 500 },
+    labelBgStyle: { fill: '#1e1e1e', fillOpacity: 0.85 },
+    labelBgPadding: [4, 2] as [number, number],
+    labelBgBorderRadius: 3,
     animated: isConcurrency,
     style: {
-      stroke: isConcurrency ? '#ff9944' : '#888',
-      opacity: Math.max(0.3, edge.confidence),
+      stroke: color,
+      strokeWidth: isConcurrency ? 2 : 1.5,
+      opacity: Math.max(0.4, edge.confidence),
+    },
+    markerEnd: {
+      type: 'arrowclosed' as const,
+      color: color,
+      width: 16,
+      height: 16,
     },
     data: {
       kind: edge.kind,
