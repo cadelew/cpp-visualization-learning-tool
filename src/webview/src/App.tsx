@@ -1,14 +1,13 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { GraphCanvas } from './components/GraphCanvas';
-import { InfoPanel } from './components/InfoPanel';
-import { Toolbar } from './components/Toolbar';
-import { FilterPanel } from './components/FilterPanel';
+import { DetailPanel } from './components/DetailPanel';
+import { HeaderBar } from './components/HeaderBar';
+import { ControlsOverlay } from './components/ControlsOverlay';
 import { useVSCodeMessaging } from './hooks/useVSCodeMessaging';
 import { LayoutAlgorithm } from './hooks/useGraphLayout';
-import { GraphNode, CodebaseGraph } from '../../types/graph';
-import { GraphFilter, WebviewConfig, ExtensionToWebviewMessage } from '../../types/webview';
-import { ThemeKind } from './utils/theme';
+import { GraphNode, GraphEdge, CodebaseGraph } from '../../types/graph';
+import { GraphFilter, ExtensionToWebviewMessage } from '../../types/webview';
 import './styles/main.css';
 
 export function App() {
@@ -17,11 +16,10 @@ export function App() {
   const [layout, setLayout] = useState<LayoutAlgorithm>('hierarchical');
   const [searchQuery, setSearchQuery] = useState('');
   const [concurrencyOnly, setConcurrencyOnly] = useState(false);
-  const [showFiles, setShowFiles] = useState(true);
   const [confidenceThreshold, setConfidenceThreshold] = useState(0);
   const [selectedSubsystem, setSelectedSubsystem] = useState<string | null>(null);
   const [fitViewTrigger, setFitViewTrigger] = useState(0);
-  const [themeKind, setThemeKind] = useState<ThemeKind>('dark');
+  const [showFilters, setShowFilters] = useState(false);
   const [visibleKinds, setVisibleKinds] = useState<Set<string>>(
     new Set([
       'file', 'namespace', 'class', 'struct', 'function', 'method',
@@ -35,13 +33,9 @@ export function App() {
       case 'graphData':
         setGraphData(message.payload);
         break;
-      case 'theme':
-        setThemeKind(message.payload.kind);
-        break;
       case 'config': {
-        const config: WebviewConfig = message.payload;
-        setLayout(config.layout === 'radial' ? 'hierarchical' : config.layout);
-        if (config.highlightConcurrency) {
+        setLayout(message.payload.layout === 'radial' ? 'hierarchical' : message.payload.layout);
+        if (message.payload.highlightConcurrency) {
           setConcurrencyOnly(true);
         }
         break;
@@ -58,6 +52,8 @@ export function App() {
     },
     [postMessage]
   );
+
+  const handleCloseDetail = useCallback(() => setSelectedNode(null), []);
 
   const handleNavigateToSource = useCallback(
     (file: string, line: number, col: number) => {
@@ -84,27 +80,8 @@ export function App() {
   const handleToggleKind = useCallback((kind: string) => {
     setVisibleKinds((prev) => {
       const next = new Set(prev);
-      if (next.has(kind)) {
-        next.delete(kind);
-      } else {
-        next.add(kind);
-      }
-      return next;
-    });
-  }, []);
-
-  const handleToggleFiles = useCallback(() => {
-    setShowFiles((prev) => {
-      const next = !prev;
-      setVisibleKinds((kinds) => {
-        const updated = new Set(kinds);
-        if (next) {
-          updated.add('file');
-        } else {
-          updated.delete('file');
-        }
-        return updated;
-      });
+      if (next.has(kind)) next.delete(kind);
+      else next.add(kind);
       return next;
     });
   }, []);
@@ -121,9 +98,7 @@ export function App() {
 
   const subsystems = useMemo(() => {
     const clusters = new Set<string>();
-    graphNodes.forEach((n) => {
-      if (n.cluster) clusters.add(n.cluster);
-    });
+    graphNodes.forEach((n) => { if (n.cluster) clusters.add(n.cluster); });
     return Array.from(clusters).sort();
   }, [graphNodes]);
 
@@ -138,9 +113,14 @@ export function App() {
     [visibleKinds, confidenceThreshold, concurrencyOnly, selectedSubsystem, searchQuery]
   );
 
+  const nodeCount = graphNodes.length;
+  const edgeCount = graphEdges.length;
+
   return (
-    <div className="app" data-theme={themeKind}>
-      <Toolbar
+    <div className="app">
+      <HeaderBar
+        nodeCount={nodeCount}
+        edgeCount={edgeCount}
         layout={layout}
         onLayoutChange={setLayout}
         searchQuery={searchQuery}
@@ -149,19 +129,10 @@ export function App() {
         onConcurrencyToggle={() => setConcurrencyOnly((p) => !p)}
         onFitView={handleFitView}
         onExport={handleExport}
-        showFiles={showFiles}
-        onToggleFiles={handleToggleFiles}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters((p) => !p)}
       />
-      <div className="app__content">
-        <FilterPanel
-          visibleKinds={visibleKinds}
-          onToggleKind={handleToggleKind}
-          confidenceThreshold={confidenceThreshold}
-          onConfidenceChange={setConfidenceThreshold}
-          subsystems={subsystems}
-          selectedSubsystem={selectedSubsystem}
-          onSubsystemChange={setSelectedSubsystem}
-        />
+      <div className="app__main">
         <ReactFlowProvider>
           <GraphCanvas
             graphNodes={graphNodes}
@@ -172,9 +143,24 @@ export function App() {
             fitViewTrigger={fitViewTrigger}
           />
         </ReactFlowProvider>
-        <InfoPanel
+
+        {showFilters && (
+          <ControlsOverlay
+            visibleKinds={visibleKinds}
+            onToggleKind={handleToggleKind}
+            confidenceThreshold={confidenceThreshold}
+            onConfidenceChange={setConfidenceThreshold}
+            subsystems={subsystems}
+            selectedSubsystem={selectedSubsystem}
+            onSubsystemChange={setSelectedSubsystem}
+          />
+        )}
+
+        <DetailPanel
           selectedNode={selectedNode}
           connectedEdges={connectedEdges}
+          allNodes={graphNodes}
+          onClose={handleCloseDetail}
           onNavigateToSource={handleNavigateToSource}
           onRequestExplanation={handleRequestExplanation}
         />

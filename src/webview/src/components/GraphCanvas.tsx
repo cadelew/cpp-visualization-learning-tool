@@ -39,7 +39,7 @@ export function GraphCanvas({
   const { computeLayout, isLayouting } = useGraphLayout();
   const { fitView } = useReactFlow();
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const layoutDoneRef = useRef(false);
+  const initialFitDone = useRef(false);
 
   const filteredData = useMemo(() => {
     let filteredNodes = graphNodes;
@@ -92,13 +92,13 @@ export function GraphCanvas({
 
     let cancelled = false;
     computeLayout(filteredData.nodes, filteredData.edges, layout).then((result) => {
-      if (!cancelled) {
-        setNodes(result.nodes);
-        setEdges(result.edges);
-        layoutDoneRef.current = true;
-        // Auto fit view after layout
-        setTimeout(() => fitView({ padding: 0.15, duration: 300 }), 50);
-      }
+      if (cancelled) return;
+      setNodes(result.nodes);
+      setEdges(result.edges);
+      setTimeout(() => {
+        fitView({ padding: 0.12, duration: 250 });
+        initialFitDone.current = true;
+      }, 60);
     });
 
     return () => { cancelled = true; };
@@ -106,7 +106,7 @@ export function GraphCanvas({
 
   useEffect(() => {
     if (fitViewTrigger > 0) {
-      setTimeout(() => fitView({ padding: 0.15, duration: 300 }), 50);
+      setTimeout(() => fitView({ padding: 0.12, duration: 250 }), 60);
     }
   }, [fitViewTrigger, fitView]);
 
@@ -114,38 +114,39 @@ export function GraphCanvas({
     (_event: React.MouseEvent, node: Node) => {
       setSelectedNodeId(node.id);
       const graphNode = graphNodes.find((n) => n.id === node.id);
-      if (graphNode) {
-        onNodeClick(graphNode);
-      }
+      if (graphNode) onNodeClick(graphNode);
     },
     [graphNodes, onNodeClick]
   );
 
   const styledNodes = useMemo(
-    () =>
-      nodes.map((node) => ({
-        ...node,
-        selected: node.id === selectedNodeId,
-      })),
+    () => nodes.map((node) => ({ ...node, selected: node.id === selectedNodeId })),
     [nodes, selectedNodeId]
   );
 
-  if (graphNodes.length === 0 && !isLayouting) {
-    return (
-      <div className="graph-canvas">
-        <div className="graph-canvas__empty">
-          <h3>No C++ files found</h3>
-          <p>Open a folder containing .cpp, .cc, .h, or .hpp files<br />and run "C++ Viz: Analyze Workspace"</p>
-        </div>
-      </div>
-    );
-  }
+  const isEmpty = graphNodes.length === 0 && !isLayouting;
 
   return (
     <div className="graph-canvas">
-      {isLayouting && (
-        <div className="graph-canvas__loading">Computing layout...</div>
+      {isEmpty && (
+        <div className="graph-canvas__empty">
+          <div className="graph-canvas__empty-icon">{'{}'}</div>
+          <div className="graph-canvas__empty-title">No graph data yet</div>
+          <div className="graph-canvas__empty-subtitle">
+            Open a folder with C++ files and run "C++ Viz: Analyze Workspace"
+          </div>
+        </div>
       )}
+
+      {isLayouting && (
+        <div className="graph-canvas__loading-overlay">
+          <div className="graph-canvas__loading-card">
+            <div className="graph-canvas__loading-spinner" />
+            <div className="graph-canvas__loading-text">Computing layout...</div>
+          </div>
+        </div>
+      )}
+
       <ReactFlow
         nodes={styledNodes}
         edges={edges}
@@ -154,8 +155,8 @@ export function GraphCanvas({
         onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.15 }}
-        minZoom={0.05}
+        fitViewOptions={{ padding: 0.12 }}
+        minZoom={0.02}
         maxZoom={4}
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{
@@ -163,12 +164,12 @@ export function GraphCanvas({
           style: { strokeWidth: 1.5 },
         }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#333" />
         <Controls showInteractive={false} />
         <MiniMap
           nodeColor={(node) => {
             const data = node.data as { color?: string };
-            return data?.color || '#888';
+            return data?.color || '#666';
           }}
           pannable
           zoomable

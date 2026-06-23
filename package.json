@@ -171,6 +171,7 @@
     "vitest": "^1.2.0"
   },
   "dependencies": {
+    "@vscode/webview-ui-toolkit": "^1.4.0",
     "@xyflow/react": "^12.11.1",
     "elkjs": "^0.11.1",
     "react": "^19.2.7",
