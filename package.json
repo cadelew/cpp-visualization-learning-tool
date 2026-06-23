@@ -1,0 +1,159 @@
+{
+  "name": "cpp-visualization-learning-tool",
+  "displayName": "C++ Codebase Visualizer",
+  "description": "Understand C++ codebases visually — architecture maps, concurrency flows, and guided walkthroughs inside VS Code",
+  "version": "0.1.0",
+  "publisher": "cadelew",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Education",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "c++",
+    "cpp",
+    "visualization",
+    "architecture",
+    "concurrency",
+    "onboarding",
+    "learning"
+  ],
+  "activationEvents": [
+    "onLanguage:cpp",
+    "onLanguage:c",
+    "onCommand:cppViz.showArchitectureGraph",
+    "onCommand:cppViz.showConcurrencyGraph",
+    "onCommand:cppViz.explainSubsystem",
+    "onCommand:cppViz.startHereGuide"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cppViz.showArchitectureGraph",
+        "title": "C++ Viz: Show Architecture Graph",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "cppViz.showConcurrencyGraph",
+        "title": "C++ Viz: Show Concurrency Graph",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "cppViz.analyzeWorkspace",
+        "title": "C++ Viz: Analyze Workspace"
+      },
+      {
+        "command": "cppViz.explainSubsystem",
+        "title": "C++ Viz: Explain This Subsystem"
+      },
+      {
+        "command": "cppViz.startHereGuide",
+        "title": "C++ Viz: Start Here (Onboarding Guide)"
+      },
+      {
+        "command": "cppViz.refreshAnalysis",
+        "title": "C++ Viz: Refresh Analysis"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cppVizExplorer",
+          "title": "C++ Visualizer",
+          "icon": "$(type-hierarchy)"
+        }
+      ]
+    },
+    "views": {
+      "cppVizExplorer": [
+        {
+          "id": "cppViz.subsystemsView",
+          "name": "Subsystems"
+        },
+        {
+          "id": "cppViz.concurrencyView",
+          "name": "Concurrency Artifacts"
+        },
+        {
+          "id": "cppViz.onboardingView",
+          "name": "Onboarding Guide"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "C++ Visualizer",
+      "properties": {
+        "cppViz.compileCommandsPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to compile_commands.json (auto-detected if empty)"
+        },
+        "cppViz.llm.provider": {
+          "type": "string",
+          "enum": ["none", "openai", "anthropic"],
+          "default": "none",
+          "description": "LLM provider for code explanations"
+        },
+        "cppViz.llm.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for the selected LLM provider"
+        },
+        "cppViz.llm.model": {
+          "type": "string",
+          "default": "gpt-4o-mini",
+          "description": "LLM model to use for explanations"
+        },
+        "cppViz.analysis.maxFileSize": {
+          "type": "number",
+          "default": 1048576,
+          "description": "Maximum file size in bytes to analyze (default 1MB)"
+        },
+        "cppViz.analysis.excludePatterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["**/build/**", "**/node_modules/**", "**/third_party/**", "**/.git/**"],
+          "description": "Glob patterns to exclude from analysis"
+        },
+        "cppViz.graph.defaultLayout": {
+          "type": "string",
+          "enum": ["hierarchical", "force-directed", "radial"],
+          "default": "hierarchical",
+          "description": "Default graph layout algorithm"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "npm run build:extension && npm run build:webview",
+    "build:extension": "esbuild ./src/extension/index.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "build:webview": "esbuild ./src/webview/src/index.tsx --bundle --outfile=dist/webview/index.js --format=iife --platform=browser --sourcemap --loader:.css=css --loader:.svg=dataurl",
+    "watch": "concurrently \"npm run watch:extension\" \"npm run watch:webview\"",
+    "watch:extension": "esbuild ./src/extension/index.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
+    "watch:webview": "esbuild ./src/webview/src/index.tsx --bundle --outfile=dist/webview/index.js --format=iife --platform=browser --sourcemap --loader:.css=css --loader:.svg=dataurl --watch",
+    "lint": "eslint src --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "concurrently": "^8.2.2",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  },
+  "dependencies": {
+    "web-tree-sitter": "^0.22.0"
+  }
+}
