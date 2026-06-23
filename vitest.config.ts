@@ -5,4 +5,10 @@ export default defineConfig({
     include: ['test/**/*.test.ts'],
     globals: false,
   },
+  resolve: {
+    alias: {
+      '@shared': '/src/types',
+      '@llm': '/src/llm',
+    },
+  },
 });
