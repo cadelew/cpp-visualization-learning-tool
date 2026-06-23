@@ -1,22 +1,22 @@
 import * as vscode from 'vscode';
+import { GraphWebviewPanel } from './webviewPanel';
 
 export function activate(context: vscode.ExtensionContext): void {
   console.log('C++ Visualizer extension activated');
 
-  // Commands will be registered by feature modules
-  // This is a placeholder for the extension entry point
+  const panelManager = GraphWebviewPanel.getInstance(context);
 
   const showArchitecture = vscode.commands.registerCommand(
     'cppViz.showArchitectureGraph',
     () => {
-      vscode.window.showInformationMessage('C++ Viz: Architecture Graph (loading...)');
+      panelManager.show();
     }
   );
 
   const showConcurrency = vscode.commands.registerCommand(
     'cppViz.showConcurrencyGraph',
     () => {
-      vscode.window.showInformationMessage('C++ Viz: Concurrency Graph (loading...)');
+      panelManager.show({ concurrencyOnly: true });
     }
   );
 
@@ -44,6 +44,10 @@ export function activate(context: vscode.ExtensionContext): void {
   const refreshAnalysis = vscode.commands.registerCommand(
     'cppViz.refreshAnalysis',
     () => {
+      panelManager.postMessage({
+        type: 'analysisProgress',
+        payload: { phase: 'refresh', percent: 0, message: 'Refreshing analysis...' },
+      });
       vscode.window.showInformationMessage('C++ Viz: Refreshing analysis...');
     }
   );

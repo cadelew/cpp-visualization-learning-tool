@@ -1,2 +1,9 @@
-// Webview entry point — will be populated by feature/extension-ui branch
-console.log('C++ Visualizer webview loaded');
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { App } from './App';
+
+const container = document.getElementById('root');
+if (container) {
+  const root = createRoot(container);
+  root.render(<App />);
+}
